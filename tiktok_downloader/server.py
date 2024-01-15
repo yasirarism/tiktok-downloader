@@ -2,7 +2,11 @@ from tiktok_downloader.mdown import mdown
 from flask import Flask, request,render_template,Response
 from . import info_post, snaptik, ssstik, tikmate
 import json, os
-app = Flask(__name__, template_folder=os.path.abspath(__file__+'/../templates'), static_folder=os.path.abspath(__file__+'/../static'))
+app = Flask(
+    __name__,
+    template_folder=os.path.abspath(f'{__file__}/../templates'),
+    static_folder=os.path.abspath(f'{__file__}/../static'),
+)
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -58,22 +62,21 @@ def snapt(path):
             }), headers={'Content-Type':'application/json'})
     elif path not in ['snaptik', 'ssstik', 'tikmate','mdown']:
         return json.dumps({'msg':'path tidak ditemukan'})
-    if request.args.get('url'):
-        try:
-            res=[]
-            if path == 'snaptik':
-                res = snaptik(request.args['url']).get_media()
-            elif path =='ssstik':
-                res = ssstik().get_media(request.args['url'])
-            elif path == 'tikmate':
-                res = tikmate().get_media(request.args['url'])
-            elif path == 'mdown':
-                res = mdown().get_media(request.args['url'])
-            return Response(json.dumps([{'type':i.type,'url':i.json} for i in res],indent=4), headers={'Content-Type':'application/json'})
-        except Exception as e:
-            print(e)
-            return Response(json.dumps({
-                'msg':'url tidak valid'
-            }, indent=4),headers={'Content-Type':'application/json'})
-    else:
+    if not request.args.get('url'):
         return json.dumps({'msg':'url parameter required'}, indent=4)
+    try:
+        res=[]
+        if path == 'snaptik':
+            res = snaptik(request.args['url']).get_media()
+        elif path =='ssstik':
+            res = ssstik().get_media(request.args['url'])
+        elif path == 'tikmate':
+            res = tikmate().get_media(request.args['url'])
+        elif path == 'mdown':
+            res = mdown().get_media(request.args['url'])
+        return Response(json.dumps([{'type':i.type,'url':i.json} for i in res],indent=4), headers={'Content-Type':'application/json'})
+    except Exception as e:
+        print(e)
+        return Response(json.dumps({
+            'msg':'url tidak valid'
+        }, indent=4),headers={'Content-Type':'application/json'})

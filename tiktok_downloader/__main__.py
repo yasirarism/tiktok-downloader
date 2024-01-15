@@ -16,49 +16,44 @@ arg.add_argument('--port', default=8000, type=int)
 arg.add_argument('--json', action='store_true')
 arg.add_argument('--save')
 parse=arg.parse_args()
-if parse.server:
+if not parse.server and parse.url and (parse.snaptik or parse.ssstik):
+    try:
+        ok=snaptik(parse.url).get_media() if parse.snaptik else ssstik().get_media(parse.url)
+        if parse.json or not(parse.save):
+            print(json.dumps( [{'type':i.type,'url':i.json} for i in ok],indent=4))
+        else:
+            ok[0].download(parse.save)
+    except Exception as e:
+        stderr.write('Post Not Found\n')
+        stderr.flush()
+        sys.exit(1)
+elif not parse.server and parse.url and parse.info:
+    try:
+        resp=info_post(parse.url)
+        print(json.dumps({
+            'account':{
+                'avatar':resp.account.avatar,
+                'username':resp.account.username,
+                'nickname':resp.account.nickname,
+                'signature':resp.account.signature,
+                'create':resp.account.create.timestamp() if resp.account.create else 0,
+                'verified':resp.account.verified
+            },
+            'music':resp.music,
+            'caption':resp.caption,
+            'create':resp.create.timestamp(),
+            'url':resp.url,
+            'id':resp.id    }, indent=4))
+    except requests.exceptions.ConnectionError:
+        stderr.write('[x] offline\n')
+        stderr.flush()
+        sys.exit(1)
+    except (KeyError, AttributeError):
+        stderr.write('Post Not Found\n')
+        stderr.flush()
+        sys.exit(1)
+elif not parse.server and parse.url or not parse.server:
+    os.system("python3 -m tiktok_downloader --help")
+else:
     from .server import app
     app.run(host=parse.host, port=parse.port, debug=bool(parse.debug))
-elif parse.url:
-    if parse.snaptik or parse.ssstik:
-        try:
-            ok=snaptik(parse.url).get_media() if parse.snaptik else ssstik().get_media(parse.url)
-            if parse.json or not(parse.save):
-                print(json.dumps( [{'type':i.type,'url':i.json} for i in ok],indent=4))
-            elif parse.save:
-                ok[0].download(parse.save)
-            else:
-                os.system(f"python3 -m tiktok_downloader --help")
-        except Exception as e:
-            stderr.write('Post Not Found\n')
-            stderr.flush()
-            sys.exit(1)
-    elif parse.info:
-        try:
-            resp=info_post(parse.url)
-            print(json.dumps({
-                'account':{
-                    'avatar':resp.account.avatar,
-                    'username':resp.account.username,
-                    'nickname':resp.account.nickname,
-                    'signature':resp.account.signature,
-                    'create':resp.account.create.timestamp() if resp.account.create else 0,
-                    'verified':resp.account.verified
-                },
-                'music':resp.music,
-                'caption':resp.caption,
-                'create':resp.create.timestamp(),
-                'url':resp.url,
-                'id':resp.id    }, indent=4))
-        except requests.exceptions.ConnectionError:
-            stderr.write('[x] offline\n')
-            stderr.flush()
-            sys.exit(1)
-        except (KeyError, AttributeError):
-            stderr.write('Post Not Found\n')
-            stderr.flush()
-            sys.exit(1)
-    else:
-        os.system(f"python3 -m tiktok_downloader --help")
-else:
-    os.system(f"python3 -m tiktok_downloader --help")
